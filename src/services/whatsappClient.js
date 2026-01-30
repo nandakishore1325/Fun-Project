@@ -9,7 +9,7 @@ export class WhatsAppBot {
   constructor() {
     this.client = new Client({
       authStrategy: new LocalAuth({
-        dataPath: './data/whatsapp-session'
+        dataPath: './data/naveena-session'
       }),
       puppeteer: {
         headless: true,
