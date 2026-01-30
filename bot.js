@@ -11,6 +11,10 @@ const model = genAI.getGenerativeModel({ model: config.model });
 const messageHistory = new Map();
 const MAX_HISTORY = 20; // Keep last 20 messages for context
 
+// Cooldown tracking
+let lastReplyTime = 0;
+const COOLDOWN_MS = 5 * 60 * 1000; // 5 minutes in milliseconds
+
 // Create WhatsApp client with local authentication (saves session)
 const client = new Client({
     authStrategy: new LocalAuth(),
@@ -35,6 +39,7 @@ client.on('ready', () => {
     console.log('WhatsApp Bot is ready and running!');
     console.log(`Monitoring group: "${config.targetGroupName}"`);
     console.log('Using Gemini AI for contextual replies (FREE)');
+    console.log('Cooldown: 5 minutes between replies');
     console.log('========================================\n');
 });
 
@@ -131,12 +136,23 @@ client.on('message', async (message) => {
         // Log the received message
         console.log(`[${new Date().toLocaleTimeString()}] ${senderName}: ${message.body}`);
 
+        // Check cooldown - wait at least 5 minutes between replies
+        const now = Date.now();
+        const timeSinceLastReply = now - lastReplyTime;
+
+        if (timeSinceLastReply < COOLDOWN_MS) {
+            const remainingSeconds = Math.ceil((COOLDOWN_MS - timeSinceLastReply) / 1000);
+            console.log(`[${new Date().toLocaleTimeString()}] Cooldown active. ${remainingSeconds}s remaining. Skipping reply.`);
+            return;
+        }
+
         // Generate contextual reply using Gemini
         const replyText = await generateReply(senderName, message.body, chat.id._serialized);
 
         if (replyText) {
             // Send the reply
             await message.reply(replyText);
+            lastReplyTime = Date.now(); // Update last reply time
             console.log(`[${new Date().toLocaleTimeString()}] Bot replied: ${replyText}`);
         } else {
             console.log(`[${new Date().toLocaleTimeString()}] Failed to generate reply`);
