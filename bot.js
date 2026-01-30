@@ -1,12 +1,11 @@
 const { Client, LocalAuth } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
-const Anthropic = require('@anthropic-ai/sdk');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
 const config = require('./config.json');
 
-// Initialize Anthropic client
-const anthropic = new Anthropic({
-    apiKey: config.anthropicApiKey
-});
+// Initialize Gemini client
+const genAI = new GoogleGenerativeAI(config.geminiApiKey);
+const model = genAI.getGenerativeModel({ model: config.model });
 
 // Store recent messages for context (per group)
 const messageHistory = new Map();
@@ -35,7 +34,7 @@ client.on('ready', () => {
     console.log('\n========================================');
     console.log('WhatsApp Bot is ready and running!');
     console.log(`Monitoring group: "${config.targetGroupName}"`);
-    console.log('Using Claude AI for contextual replies');
+    console.log('Using Gemini AI for contextual replies (FREE)');
     console.log('========================================\n');
 });
 
@@ -54,7 +53,7 @@ client.on('disconnected', (reason) => {
     console.log('Client disconnected:', reason);
 });
 
-// Generate contextual reply using Claude
+// Generate contextual reply using Gemini
 async function generateReply(senderName, messageText, chatId) {
     // Get or initialize message history for this chat
     if (!messageHistory.has(chatId)) {
@@ -63,10 +62,7 @@ async function generateReply(senderName, messageText, chatId) {
     const history = messageHistory.get(chatId);
 
     // Add the new message to history
-    history.push({
-        role: 'user',
-        content: `${senderName}: ${messageText}`
-    });
+    history.push(`${senderName}: ${messageText}`);
 
     // Keep only the last MAX_HISTORY messages
     while (history.length > MAX_HISTORY) {
@@ -74,34 +70,27 @@ async function generateReply(senderName, messageText, chatId) {
     }
 
     // Build conversation context
-    const conversationContext = history
-        .map(msg => msg.content)
-        .join('\n');
+    const conversationContext = history.join('\n');
+
+    const prompt = `${config.systemPrompt}
+
+Here's the recent chat history:
+
+${conversationContext}
+
+Respond to the latest message from ${senderName}. Remember to be concise and natural. Just give the reply, nothing else.`;
 
     try {
-        const response = await anthropic.messages.create({
-            model: config.model,
-            max_tokens: 256,
-            system: config.systemPrompt,
-            messages: [
-                {
-                    role: 'user',
-                    content: `Here's the recent chat history:\n\n${conversationContext}\n\nRespond to the latest message from ${senderName}. Remember to be concise and natural.`
-                }
-            ]
-        });
-
-        const replyText = response.content[0].text;
+        const result = await model.generateContent(prompt);
+        const response = await result.response;
+        const replyText = response.text().trim();
 
         // Add bot's reply to history
-        history.push({
-            role: 'assistant',
-            content: `Bot: ${replyText}`
-        });
+        history.push(`Bot: ${replyText}`);
 
         return replyText;
     } catch (error) {
-        console.error('Error generating reply with Claude:', error.message);
+        console.error('Error generating reply with Gemini:', error.message);
         return null;
     }
 }
@@ -142,7 +131,7 @@ client.on('message', async (message) => {
         // Log the received message
         console.log(`[${new Date().toLocaleTimeString()}] ${senderName}: ${message.body}`);
 
-        // Generate contextual reply using Claude
+        // Generate contextual reply using Gemini
         const replyText = await generateReply(senderName, message.body, chat.id._serialized);
 
         if (replyText) {
@@ -164,7 +153,7 @@ client.on('error', (error) => {
 });
 
 // Start the client
-console.log('Starting WhatsApp Bot with Claude AI...');
+console.log('Starting WhatsApp Bot with Gemini AI (FREE)...');
 console.log('Please wait for the QR code to appear...\n');
 client.initialize();
 

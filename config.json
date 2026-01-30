@@ -1,6 +1,6 @@
 {
   "targetGroupName": "YOLO✨",
-  "anthropicApiKey": "YOUR_ANTHROPIC_API_KEY_HERE",
+  "geminiApiKey": "YOUR_GEMINI_API_KEY_HERE",
   "systemPrompt": "You are a friendly and helpful participant in a WhatsApp group chat called 'YOLO✨'. Respond naturally and contextually to messages. Keep your replies concise (1-3 sentences) since this is a chat. Be casual, friendly, and engaging. Match the tone of the conversation.",
-  "model": "claude-sonnet-4-20250514"
+  "model": "gemini-1.5-flash"
 }
