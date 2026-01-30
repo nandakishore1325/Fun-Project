@@ -1,0 +1,4 @@
+{
+  "targetGroupName": "YOUR_GROUP_NAME_HERE",
+  "replyMessage": "Hello {sender}! Thank you for your message. This is an automated reply."
+}
