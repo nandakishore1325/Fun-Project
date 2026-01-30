@@ -1,6 +1,16 @@
 const { Client, LocalAuth } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
+const Anthropic = require('@anthropic-ai/sdk');
 const config = require('./config.json');
+
+// Initialize Anthropic client
+const anthropic = new Anthropic({
+    apiKey: config.anthropicApiKey
+});
+
+// Store recent messages for context (per group)
+const messageHistory = new Map();
+const MAX_HISTORY = 20; // Keep last 20 messages for context
 
 // Create WhatsApp client with local authentication (saves session)
 const client = new Client({
@@ -25,6 +35,7 @@ client.on('ready', () => {
     console.log('\n========================================');
     console.log('WhatsApp Bot is ready and running!');
     console.log(`Monitoring group: "${config.targetGroupName}"`);
+    console.log('Using Claude AI for contextual replies');
     console.log('========================================\n');
 });
 
@@ -42,6 +53,58 @@ client.on('auth_failure', (msg) => {
 client.on('disconnected', (reason) => {
     console.log('Client disconnected:', reason);
 });
+
+// Generate contextual reply using Claude
+async function generateReply(senderName, messageText, chatId) {
+    // Get or initialize message history for this chat
+    if (!messageHistory.has(chatId)) {
+        messageHistory.set(chatId, []);
+    }
+    const history = messageHistory.get(chatId);
+
+    // Add the new message to history
+    history.push({
+        role: 'user',
+        content: `${senderName}: ${messageText}`
+    });
+
+    // Keep only the last MAX_HISTORY messages
+    while (history.length > MAX_HISTORY) {
+        history.shift();
+    }
+
+    // Build conversation context
+    const conversationContext = history
+        .map(msg => msg.content)
+        .join('\n');
+
+    try {
+        const response = await anthropic.messages.create({
+            model: config.model,
+            max_tokens: 256,
+            system: config.systemPrompt,
+            messages: [
+                {
+                    role: 'user',
+                    content: `Here's the recent chat history:\n\n${conversationContext}\n\nRespond to the latest message from ${senderName}. Remember to be concise and natural.`
+                }
+            ]
+        });
+
+        const replyText = response.content[0].text;
+
+        // Add bot's reply to history
+        history.push({
+            role: 'assistant',
+            content: `Bot: ${replyText}`
+        });
+
+        return replyText;
+    } catch (error) {
+        console.error('Error generating reply with Claude:', error.message);
+        return null;
+    }
+}
 
 // Handle incoming messages
 client.on('message', async (message) => {
@@ -67,24 +130,28 @@ client.on('message', async (message) => {
             return;
         }
 
+        // Skip empty messages or media-only messages
+        if (!message.body || message.body.trim() === '') {
+            return;
+        }
+
         // Get sender info
         const contact = await message.getContact();
-        const senderName = contact.pushname || contact.name || 'Unknown';
+        const senderName = contact.pushname || contact.name || 'Someone';
 
         // Log the received message
-        console.log(`[${new Date().toLocaleTimeString()}] Message from ${senderName}: ${message.body}`);
+        console.log(`[${new Date().toLocaleTimeString()}] ${senderName}: ${message.body}`);
 
-        // Build the reply message
-        let replyText = config.replyMessage;
+        // Generate contextual reply using Claude
+        const replyText = await generateReply(senderName, message.body, chat.id._serialized);
 
-        // Replace placeholders if they exist in the config
-        replyText = replyText.replace('{sender}', senderName);
-        replyText = replyText.replace('{message}', message.body);
-
-        // Send the reply
-        await message.reply(replyText);
-
-        console.log(`[${new Date().toLocaleTimeString()}] Replied to ${senderName}`);
+        if (replyText) {
+            // Send the reply
+            await message.reply(replyText);
+            console.log(`[${new Date().toLocaleTimeString()}] Bot replied: ${replyText}`);
+        } else {
+            console.log(`[${new Date().toLocaleTimeString()}] Failed to generate reply`);
+        }
 
     } catch (error) {
         console.error('Error processing message:', error);
@@ -97,7 +164,7 @@ client.on('error', (error) => {
 });
 
 // Start the client
-console.log('Starting WhatsApp Bot...');
+console.log('Starting WhatsApp Bot with Claude AI...');
 console.log('Please wait for the QR code to appear...\n');
 client.initialize();
 
