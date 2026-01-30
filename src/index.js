@@ -5,8 +5,8 @@ import { config } from '../config/config.js';
 function validateConfig() {
   const errors = [];
 
-  if (!config.ANTHROPIC_API_KEY || config.ANTHROPIC_API_KEY === 'your-api-key-here') {
-    errors.push('❌ ANTHROPIC_API_KEY is not set. Get one at https://console.anthropic.com/');
+  if (!config.GEMINI_API_KEY || config.GEMINI_API_KEY === 'your-api-key-here') {
+    errors.push('❌ GEMINI_API_KEY is not set. Get one FREE at https://aistudio.google.com/apikey');
   }
 
   if (!config.TARGET_PHONE_NUMBER || config.TARGET_PHONE_NUMBER === '919876543210') {
@@ -19,7 +19,7 @@ function validateConfig() {
     console.log('\nEdit config/config.js to fix these issues.\n');
 
     // Only exit if API key is missing
-    if (errors.some(e => e.includes('ANTHROPIC_API_KEY'))) {
+    if (errors.some(e => e.includes('GEMINI_API_KEY'))) {
       console.log('Cannot start without API key. Exiting...');
       process.exit(1);
     }
@@ -32,6 +32,7 @@ async function main() {
 ╔═══════════════════════════════════════════════════════╗
 ║     🤖 WhatsApp Contextual Bot                        ║
 ║     Auto-reply with AI-powered contextual messages    ║
+║     Powered by Google Gemini (FREE)                   ║
 ╚═══════════════════════════════════════════════════════╝
 `);
 

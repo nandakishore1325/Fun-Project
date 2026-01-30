@@ -1,15 +1,20 @@
-import Anthropic from '@anthropic-ai/sdk';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import { config } from '../../config/config.js';
 
 export class AIService {
   constructor() {
-    this.client = new Anthropic({
-      apiKey: config.ANTHROPIC_API_KEY
+    this.genAI = new GoogleGenerativeAI(config.GEMINI_API_KEY);
+    this.model = this.genAI.getGenerativeModel({
+      model: config.GEMINI_MODEL,
+      generationConfig: {
+        maxOutputTokens: 256,
+        temperature: 0.9,
+      }
     });
   }
 
   async generateResponse(incomingMessage, chatContext) {
-    const systemPrompt = `You are helping ${config.YOUR_NAME} reply to their friend ${config.TARGET_NAME} on WhatsApp.
+    const prompt = `You are helping ${config.YOUR_NAME} reply to their friend ${config.TARGET_NAME} on WhatsApp.
 
 Your job is to generate a reply that:
 1. Is FUN and light-hearted - use humor, playful teasing, witty comebacks
@@ -33,9 +38,7 @@ IMPORTANT RULES:
 - If unsure, lean towards being friendly and asking a follow-up question
 - Keep responses SHORT - this is WhatsApp, not email!
 
-Based on the conversation history and the latest message, generate a single reply.`;
-
-    const userPrompt = `Here's the conversation context:
+Here's the conversation context:
 
 ${chatContext || 'No previous conversation history available.'}
 
@@ -47,19 +50,9 @@ LATEST MESSAGE FROM ${config.TARGET_NAME}:
 Generate a fun, contextual reply that encourages continued conversation. Just respond with the message text only, no quotes or explanations.`;
 
     try {
-      const response = await this.client.messages.create({
-        model: config.CLAUDE_MODEL,
-        max_tokens: 256,
-        system: systemPrompt,
-        messages: [
-          {
-            role: 'user',
-            content: userPrompt
-          }
-        ]
-      });
-
-      const reply = response.content[0].text.trim();
+      const result = await this.model.generateContent(prompt);
+      const response = await result.response;
+      const reply = response.text().trim();
       console.log(`🤖 AI generated reply: "${reply}"`);
       return reply;
     } catch (error) {

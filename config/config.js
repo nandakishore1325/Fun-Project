@@ -1,8 +1,8 @@
 // Configuration for the WhatsApp Contextual Bot
 
 export const config = {
-  // Your Anthropic API key - get one at https://console.anthropic.com/
-  ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY || 'your-api-key-here',
+  // Your Google Gemini API key - get one FREE at https://aistudio.google.com/apikey
+  GEMINI_API_KEY: process.env.GEMINI_API_KEY || 'your-api-key-here',
 
   // The phone number of the person you want to auto-reply to
   // Format: country code + number (e.g., '919876543210' for India)
@@ -21,8 +21,8 @@ export const config = {
   // Maximum number of recent messages to include as context
   MAX_CONTEXT_MESSAGES: 50,
 
-  // Claude model to use
-  CLAUDE_MODEL: 'claude-sonnet-4-20250514',
+  // Gemini model to use (gemini-1.5-flash is fast and free)
+  GEMINI_MODEL: 'gemini-1.5-flash',
 
   // Path to chat history file
   CHAT_HISTORY_FILE: './data/chat_history.json',

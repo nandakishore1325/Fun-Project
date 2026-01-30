@@ -2,36 +2,46 @@
 
 A fun WhatsApp bot that automatically replies to a specific contact with contextual, AI-powered messages. It waits 20 seconds after receiving a message before sending a thoughtful, conversation-continuing reply.
 
+**Powered by Google Gemini API (FREE!)**
+
 ## Features
 
 - **Targeted Replies**: Only responds to one specific contact (you choose who)
 - **20-Second Delay**: Waits before replying to seem natural and human-like
-- **Contextual AI**: Uses Claude to generate replies based on conversation history
+- **Contextual AI**: Uses Google Gemini to generate replies based on conversation history
 - **Chat History**: Import your earlier WhatsApp chats for better context
 - **Fun & Safe**: Replies are witty, friendly, and encourage continued conversation
+- **FREE**: Uses Google Gemini's generous free tier (60 requests/minute)
 
 ## Prerequisites
 
 - Node.js 18 or higher
-- An Anthropic API key ([get one here](https://console.anthropic.com/))
+- A Google Gemini API key (FREE - [get one here](https://aistudio.google.com/apikey))
 - A WhatsApp account
 - Google Chrome or Chromium browser installed
 
 ## Setup
 
-### 1. Install Dependencies
+### 1. Get Your FREE Gemini API Key
+
+1. Go to [Google AI Studio](https://aistudio.google.com/apikey)
+2. Sign in with your Google account
+3. Click "Create API Key"
+4. Copy the key
+
+### 2. Install Dependencies
 
 ```bash
 npm install
 ```
 
-### 2. Configure the Bot
+### 3. Configure the Bot
 
 Edit `config/config.js` with your settings:
 
 ```javascript
-// Your Anthropic API key
-ANTHROPIC_API_KEY: 'sk-ant-your-key-here',
+// Your FREE Gemini API key
+GEMINI_API_KEY: 'your-api-key-here',
 
 // Target phone number (country code + number, no + sign)
 // Example: 919876543210 for Indian number +91 98765 43210
@@ -48,13 +58,13 @@ REPLY_DELAY_MS: 20000,
 Or use environment variables:
 
 ```bash
-export ANTHROPIC_API_KEY=sk-ant-xxxxx
+export GEMINI_API_KEY=your-api-key-here
 export TARGET_PHONE_NUMBER=919876543210
 export YOUR_NAME=Me
 export TARGET_NAME=Friend
 ```
 
-### 3. Add Earlier Chat History (Optional but Recommended)
+### 4. Add Earlier Chat History (Optional but Recommended)
 
 Export your WhatsApp chat with the target contact:
 
@@ -65,13 +75,13 @@ Export your WhatsApp chat with the target contact:
 
 Paste the exported chat into `data/earlier_chats.txt`. This gives the AI context about your relationship and conversation style.
 
-### 4. Start the Bot
+### 5. Start the Bot
 
 ```bash
 npm start
 ```
 
-### 5. Link WhatsApp
+### 6. Link WhatsApp
 
 When the bot starts, you'll see a QR code in the terminal:
 
@@ -90,7 +100,7 @@ Message received from target contact
            ↓
    Load chat history
            ↓
- Generate AI response
+ Generate AI response (Gemini)
            ↓
     Send reply
            ↓
@@ -112,7 +122,7 @@ If multiple messages arrive during the 20-second wait, the timer resets to ensur
 ├── src/
 │   ├── index.js           # Entry point
 │   ├── services/
-│   │   ├── aiService.js   # Claude AI integration
+│   │   ├── aiService.js   # Gemini AI integration
 │   │   └── whatsappClient.js  # WhatsApp bot logic
 │   └── utils/
 │       └── chatHistory.js # Chat history management
@@ -123,13 +133,13 @@ If multiple messages arrive during the 20-second wait, the timer resets to ensur
 
 | Option | Default | Description |
 |--------|---------|-------------|
-| `ANTHROPIC_API_KEY` | - | Your Claude API key |
+| `GEMINI_API_KEY` | - | Your FREE Google Gemini API key |
 | `TARGET_PHONE_NUMBER` | - | Phone number to reply to (with country code) |
 | `REPLY_DELAY_MS` | 20000 | Delay before replying (ms) |
 | `YOUR_NAME` | "Me" | Your name for context |
 | `TARGET_NAME` | "Friend" | Their name for context |
 | `MAX_CONTEXT_MESSAGES` | 50 | Recent messages to include |
-| `CLAUDE_MODEL` | claude-sonnet-4-20250514 | AI model to use |
+| `GEMINI_MODEL` | gemini-1.5-flash | AI model (fast & free) |
 
 ## Tips for Best Results
 
@@ -155,7 +165,11 @@ Press `Ctrl+C` to gracefully stop the bot. Your session will be saved for next t
 **Bot not responding?**
 - Verify the phone number format (country code + number, no + sign)
 - Check the console for error messages
-- Make sure your Anthropic API key is valid
+- Make sure your Gemini API key is valid
+
+**API errors?**
+- The free tier has limits (60 requests/minute). If exceeded, wait a minute.
+- Make sure your API key is correctly copied
 
 ## Disclaimer
 
