@@ -1,8 +1,8 @@
-// Hasna Bot - Self-contained WhatsApp contextual reply bot
+// Hasna Bot - Self-contained WhatsApp contextual reply bot (Groq)
 import pkg from 'whatsapp-web.js';
 const { Client, LocalAuth } = pkg;
 import qrcode from 'qrcode-terminal';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import Groq from 'groq-sdk';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -29,7 +29,7 @@ class ChatHistoryManager {
           .join('\n');
         console.log('📜 Loaded earlier chat history with Hasna');
       } else {
-        console.log('📝 No earlier chat history found. Add chats to hasna-bot/data/earlier_chats.txt');
+        console.log('📝 No earlier chat history found.');
       }
     } catch (error) {
       console.error('Error loading earlier chats:', error.message);
@@ -76,13 +76,12 @@ class ChatHistoryManager {
     if (this.earlierChats) {
       context += '=== EARLIER CONVERSATION HISTORY ===\n';
       context += this.earlierChats;
-      context += '\n\n=== RECENT MESSAGES (CURRENT SESSION) ===\n';
+      context += '\n\n=== RECENT MESSAGES ===\n';
     }
 
     if (recentMessages.length > 0) {
       recentMessages.forEach(msg => {
-        const time = new Date(msg.timestamp).toLocaleString();
-        context += `[${time}] ${msg.sender}: ${msg.content}\n`;
+        context += `${msg.sender}: ${msg.content}\n`;
       });
     }
 
@@ -90,75 +89,83 @@ class ChatHistoryManager {
   }
 }
 
-// ============ AI SERVICE ============
+// ============ AI SERVICE (GROQ) ============
 class AIService {
   constructor() {
-    this.genAI = new GoogleGenerativeAI(config.GEMINI_API_KEY);
-    this.model = this.genAI.getGenerativeModel({
-      model: config.GEMINI_MODEL,
-      generationConfig: { maxOutputTokens: 256, temperature: 0.9 }
-    });
+    this.groq = new Groq({ apiKey: config.GROQ_API_KEY });
   }
 
   async generateResponse(incomingMessage, chatContext) {
-    const prompt = `You ARE ${config.YOUR_NAME}. You're a 24 year old Indian guy working in Bangalore. You're chatting with your friend ${config.TARGET_NAME} on WhatsApp.
+    const systemPrompt = `You ARE ${config.YOUR_NAME}. You're a 24 year old guy working in Bangalore. You're chatting with your friend ${config.TARGET_NAME} on WhatsApp.
 
 ABOUT YOU:
-- 24 years old, male, Indian
+- 24 years old, male
 - Work in Bangalore (tech job)
-- Casual, chill personality
-- Sometimes use Hinglish (mix of Hindi/English) naturally like "yaar", "bro", "arrey", "kya", "accha"
+- Casual, chill, witty personality
+- Speak in ENGLISH only
 - Use lowercase often, skip punctuation sometimes like real texting
-- Occasionally use Indian slang or expressions
 
 YOUR TEXTING STYLE:
 - Super casual, like talking to a close friend
 - Short messages, 1-2 sentences max
-- Sometimes just react with one word or phrase
-- Use "haha", "lol", "bruh", "dude", "man" naturally
+- Sometimes just react with one word like "nice", "damn", "wait what"
+- Use "haha", "lol", "bruh", "dude", "man", "nah", "yeah" naturally
 - Don't overuse emojis, maybe 1 occasionally or none
 - Can be slightly sarcastic or teasing in a friendly way
-- Ask follow up questions to keep convo going
-- Sound genuinely interested, not formal
+- Ask follow up questions to keep the conversation going
+- Sound genuinely interested and engaged
+- Vary your responses - don't repeat the same phrases
+- Be warm and friendly but not over the top
 
 NEVER DO THIS:
 - Don't sound like a bot or AI
 - Don't be too enthusiastic or use too many exclamation marks
-- Don't use phrases like "Tell me more!" or "That's interesting!"
+- Don't use phrases like "Tell me more!" or "That's interesting!" or "That's great!"
 - Don't be formal or polite-sounding
 - Don't use proper grammar all the time
+- Don't explain yourself or add unnecessary context
+- Don't use Hindi or Hinglish words
+- Just reply naturally like a real friend texting`;
 
-CONVERSATION CONTEXT:
+    const userMessage = `CONVERSATION SO FAR:
 ${chatContext || 'Starting fresh conversation.'}
 
-${config.TARGET_NAME} JUST SAID:
-"${incomingMessage}"
+${config.TARGET_NAME} just said: "${incomingMessage}"
 
-Reply as ${config.YOUR_NAME}. Just the message, nothing else:`;
+Reply as ${config.YOUR_NAME} (just the message, nothing else):`;
 
     try {
-      const result = await this.model.generateContent(prompt);
-      const response = await result.response;
-      const reply = response.text().trim();
+      const completion = await this.groq.chat.completions.create({
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userMessage }
+        ],
+        model: config.GROQ_MODEL,
+        temperature: 0.9,
+        max_tokens: 150,
+      });
+
+      const reply = completion.choices[0]?.message?.content?.trim() || '';
       console.log(`🤖 AI generated reply: "${reply}"`);
       return reply;
     } catch (error) {
       console.error('Error generating AI response:', error.message);
       const fallbacks = [
-        "haha what",
+        "haha wait what",
         "wait what happened",
-        "arrey tell na",
-        "hmm",
-        "lol okay",
+        "no way",
+        "hmm okay",
+        "lol what",
         "bro what",
-        "accha accha",
         "and then?",
         "yo",
-        "kya hua",
-        "nice nice",
-        "hmm tell me",
-        "haan so",
-        "lol why tho"
+        "damn really",
+        "nice",
+        "hmm tell me more",
+        "wait seriously?",
+        "lol why tho",
+        "oh damn",
+        "that's wild"
       ];
       return fallbacks[Math.floor(Math.random() * fallbacks.length)];
     }
@@ -217,7 +224,6 @@ class WhatsAppBot {
   async handleIncomingMessage(message) {
     try {
       const chat = await message.getChat();
-      const contact = await message.getContact();
       const senderId = message.from;
 
       if (senderId !== this.targetChatId) return;
@@ -270,8 +276,7 @@ class WhatsAppBot {
     console.log(`
 ╔═══════════════════════════════════════════════════════╗
 ║     🤖 Hasna Bot                                      ║
-║     Auto-reply with AI-powered contextual messages    ║
-║     Powered by Google Gemini (FREE)                   ║
+║     Powered by Groq (Llama) - FREE & FAST             ║
 ╚═══════════════════════════════════════════════════════╝
 `);
     this.chatHistory.loadEarlierChats();

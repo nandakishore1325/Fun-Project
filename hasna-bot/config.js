@@ -1,8 +1,8 @@
 // Configuration for Hasna Bot
 
 export const config = {
-  // Your Google Gemini API key
-  GEMINI_API_KEY: 'AIzaSyDVcmYRO6XEYAddTpPTla_xk5ARSuB1NO0',
+  // Your Groq API key (FREE) - set via environment variable
+  GROQ_API_KEY: process.env.GROQ_API_KEY || '',
 
   // Hasna's phone number
   TARGET_PHONE_NUMBER: '919539073546',
@@ -19,8 +19,8 @@ export const config = {
   // Max context messages
   MAX_CONTEXT_MESSAGES: 50,
 
-  // Gemini model
-  GEMINI_MODEL: 'gemini-pro',
+  // Groq model
+  GROQ_MODEL: 'llama-3.1-8b-instant',
 
   // Hasna-specific paths
   CHAT_HISTORY_FILE: './hasna-bot/data/chat_history.json',
