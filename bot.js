@@ -17,7 +17,10 @@ const COOLDOWN_MS = 5 * 60 * 1000; // 5 minutes in milliseconds
 
 // Create WhatsApp client with local authentication (saves session)
 const client = new Client({
-    authStrategy: new LocalAuth(),
+    authStrategy: new LocalAuth({
+        clientId: 'yolo-bot',
+        dataPath: './data/yolo-session'
+    }),
     puppeteer: {
         headless: true,
         args: ['--no-sandbox', '--disable-setuid-sandbox']
