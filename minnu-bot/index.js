@@ -1,8 +1,8 @@
-// Minnu Bot - Self-contained WhatsApp contextual reply bot
+// Minnu Bot - Self-contained WhatsApp contextual reply bot (Groq)
 import pkg from 'whatsapp-web.js';
 const { Client, LocalAuth } = pkg;
 import qrcode from 'qrcode-terminal';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import Groq from 'groq-sdk';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -29,7 +29,7 @@ class ChatHistoryManager {
           .join('\n');
         console.log('📜 Loaded earlier chat history with Minnu');
       } else {
-        console.log('📝 No earlier chat history found. Add chats to minnu-bot/data/earlier_chats.txt');
+        console.log('📝 No earlier chat history found.');
       }
     } catch (error) {
       console.error('Error loading earlier chats:', error.message);
@@ -76,13 +76,12 @@ class ChatHistoryManager {
     if (this.earlierChats) {
       context += '=== EARLIER CONVERSATION HISTORY ===\n';
       context += this.earlierChats;
-      context += '\n\n=== RECENT MESSAGES (CURRENT SESSION) ===\n';
+      context += '\n\n=== RECENT MESSAGES ===\n';
     }
 
     if (recentMessages.length > 0) {
       recentMessages.forEach(msg => {
-        const time = new Date(msg.timestamp).toLocaleString();
-        context += `[${time}] ${msg.sender}: ${msg.content}\n`;
+        context += `${msg.sender}: ${msg.content}\n`;
       });
     }
 
@@ -90,36 +89,33 @@ class ChatHistoryManager {
   }
 }
 
-// ============ AI SERVICE ============
+// ============ AI SERVICE (GROQ) ============
 class AIService {
   constructor() {
-    this.genAI = new GoogleGenerativeAI(config.GEMINI_API_KEY);
-    this.model = this.genAI.getGenerativeModel({
-      model: config.GEMINI_MODEL,
-      generationConfig: { maxOutputTokens: 256, temperature: 0.9 }
-    });
+    this.groq = new Groq({ apiKey: config.GROQ_API_KEY });
   }
 
   async generateResponse(incomingMessage, chatContext) {
-    const prompt = `You ARE ${config.YOUR_NAME}. You're a 24 year old Indian guy working in Bangalore. You're chatting with your friend ${config.TARGET_NAME} on WhatsApp.
+    const systemPrompt = `You ARE ${config.YOUR_NAME}. You're a 24 year old Indian guy working in Bangalore. You're chatting with your friend ${config.TARGET_NAME} on WhatsApp.
 
 ABOUT YOU:
 - 24 years old, male, Indian
 - Work in Bangalore (tech job)
 - Casual, chill personality
-- Sometimes use Hinglish (mix of Hindi/English) naturally like "yaar", "bro", "arrey", "kya", "accha"
-- Use lowercase often, skip punctuation sometimes like real texting
-- Occasionally use Indian slang or expressions
+- Sometimes use Hinglish naturally like "yaar", "bro", "arrey", "kya", "accha", "acha"
+- Use lowercase often, skip punctuation sometimes
+- Occasionally use Indian slang
 
 YOUR TEXTING STYLE:
 - Super casual, like talking to a close friend
 - Short messages, 1-2 sentences max
-- Sometimes just react with one word or phrase
+- Sometimes just react with one word
 - Use "haha", "lol", "bruh", "dude", "man" naturally
 - Don't overuse emojis, maybe 1 occasionally or none
 - Can be slightly sarcastic or teasing in a friendly way
-- Ask follow up questions to keep convo going
+- Ask follow up questions naturally
 - Sound genuinely interested, not formal
+- Type like you're actually texting, not writing an essay
 
 NEVER DO THIS:
 - Don't sound like a bot or AI
@@ -127,19 +123,28 @@ NEVER DO THIS:
 - Don't use phrases like "Tell me more!" or "That's interesting!"
 - Don't be formal or polite-sounding
 - Don't use proper grammar all the time
+- Don't explain yourself or add context
+- Just reply naturally like a friend would`;
 
-CONVERSATION CONTEXT:
+    const userMessage = `CONVERSATION SO FAR:
 ${chatContext || 'Starting fresh conversation.'}
 
-${config.TARGET_NAME} JUST SAID:
-"${incomingMessage}"
+${config.TARGET_NAME} just said: "${incomingMessage}"
 
-Reply as ${config.YOUR_NAME}. Just the message, nothing else:`;
+Reply as ${config.YOUR_NAME} (just the message, nothing else):`;
 
     try {
-      const result = await this.model.generateContent(prompt);
-      const response = await result.response;
-      const reply = response.text().trim();
+      const completion = await this.groq.chat.completions.create({
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userMessage }
+        ],
+        model: config.GROQ_MODEL,
+        temperature: 0.9,
+        max_tokens: 150,
+      });
+
+      const reply = completion.choices[0]?.message?.content?.trim() || '';
       console.log(`🤖 AI generated reply: "${reply}"`);
       return reply;
     } catch (error) {
@@ -217,7 +222,6 @@ class WhatsAppBot {
   async handleIncomingMessage(message) {
     try {
       const chat = await message.getChat();
-      const contact = await message.getContact();
       const senderId = message.from;
 
       if (senderId !== this.targetChatId) return;
@@ -270,8 +274,7 @@ class WhatsAppBot {
     console.log(`
 ╔═══════════════════════════════════════════════════════╗
 ║     🤖 Minnu Bot                                      ║
-║     Auto-reply with AI-powered contextual messages    ║
-║     Powered by Google Gemini (FREE)                   ║
+║     Powered by Groq (Llama) - FREE & FAST             ║
 ╚═══════════════════════════════════════════════════════╝
 `);
     this.chatHistory.loadEarlierChats();

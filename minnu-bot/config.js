@@ -1,8 +1,8 @@
 // Configuration for Minnu Bot
 
 export const config = {
-  // Your Google Gemini API key
-  GEMINI_API_KEY: 'AIzaSyDVcmYRO6XEYAddTpPTla_xk5ARSuB1NO0',
+  // Your Groq API key (FREE) - set via environment variable
+  GROQ_API_KEY: process.env.GROQ_API_KEY || '',
 
   // Minnu's phone number
   TARGET_PHONE_NUMBER: '917356968830',
@@ -19,8 +19,8 @@ export const config = {
   // Max context messages
   MAX_CONTEXT_MESSAGES: 50,
 
-  // Gemini model
-  GEMINI_MODEL: 'gemini-1.5-flash-8b',
+  // Groq model (llama is great for casual chat)
+  GROQ_MODEL: 'llama-3.1-8b-instant',
 
   // Minnu-specific paths
   CHAT_HISTORY_FILE: './minnu-bot/data/chat_history.json',
