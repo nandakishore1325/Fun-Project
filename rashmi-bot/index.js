@@ -96,43 +96,25 @@ class AIService {
   }
 
   async generateResponse(incomingMessage, chatContext) {
-    const systemPrompt = `You ARE ${config.YOUR_NAME}. You're a 24 year old guy working in Bangalore. You're chatting with your friend ${config.TARGET_NAME} on WhatsApp.
+    const systemPrompt = `You are ${config.YOUR_NAME}, a 24 year old guy from Bangalore chatting with ${config.TARGET_NAME} on WhatsApp.
 
-ABOUT YOU:
-- 24 years old, male
-- Work in Bangalore (tech job)
-- Casual, chill, witty personality
-- Speak in ENGLISH only
-- Use lowercase often, skip punctuation sometimes like real texting
+Read the conversation history carefully and respond naturally based on context. Your tone, length, and style should adapt to what's being discussed - be it casual banter, something serious, jokes, or anything else.
 
-YOUR TEXTING STYLE:
-- Super casual, like talking to a close friend
-- Short messages, 1-2 sentences max
-- Sometimes just react with one word like "nice", "damn", "wait what"
-- Use "haha", "lol", "bruh", "dude", "man", "nah", "yeah" naturally
-- Don't overuse emojis, maybe 1 occasionally or none
-- Can be slightly sarcastic or teasing in a friendly way
-- Ask follow up questions to keep the conversation going
-- Sound genuinely interested and engaged
-- Vary your responses - don't repeat the same phrases
-- Be warm and friendly but not over the top
+Key traits:
+- Text casually like a real person (lowercase, skip punctuation sometimes)
+- English only
+- Match the energy of the conversation
+- Be genuine and natural - respond how a real friend would
+- Length varies based on context - short for casual, longer if needed
 
-NEVER DO THIS:
-- Don't sound like a bot or AI
-- Don't be too enthusiastic or use too many exclamation marks
-- Don't use phrases like "Tell me more!" or "That's interesting!" or "That's great!"
-- Don't be formal or polite-sounding
-- Don't use proper grammar all the time
-- Don't explain yourself or add unnecessary context
-- Don't use Hindi or Hinglish words
-- Just reply naturally like a real friend texting`;
+Just be yourself and respond naturally to whatever ${config.TARGET_NAME} says.`;
 
-    const userMessage = `CONVERSATION SO FAR:
-${chatContext || 'Starting fresh conversation.'}
+    const userMessage = `CONVERSATION HISTORY:
+${chatContext || 'New conversation.'}
 
-${config.TARGET_NAME} just said: "${incomingMessage}"
+${config.TARGET_NAME}: "${incomingMessage}"
 
-Reply as ${config.YOUR_NAME} (just the message, nothing else):`;
+Your reply:`;
 
     try {
       const completion = await this.groq.chat.completions.create({
@@ -142,7 +124,7 @@ Reply as ${config.YOUR_NAME} (just the message, nothing else):`;
         ],
         model: config.GROQ_MODEL,
         temperature: 0.9,
-        max_tokens: 150,
+        max_tokens: 250,
       });
 
       const reply = completion.choices[0]?.message?.content?.trim() || '';
@@ -151,21 +133,15 @@ Reply as ${config.YOUR_NAME} (just the message, nothing else):`;
     } catch (error) {
       console.error('Error generating AI response:', error.message);
       const fallbacks = [
-        "haha wait what",
-        "wait what happened",
-        "no way",
-        "hmm okay",
-        "lol what",
-        "bro what",
+        "haha what",
+        "wait what",
+        "hmm",
+        "lol",
         "and then?",
-        "yo",
-        "damn really",
-        "nice",
-        "hmm tell me more",
-        "wait seriously?",
-        "lol why tho",
-        "oh damn",
-        "that's wild"
+        "oh nice",
+        "damn",
+        "seriously?",
+        "no way"
       ];
       return fallbacks[Math.floor(Math.random() * fallbacks.length)];
     }
