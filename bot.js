@@ -13,7 +13,7 @@ const MAX_HISTORY = 20; // Keep last 20 messages for context
 
 // Cooldown tracking
 let lastReplyTime = 0;
-const COOLDOWN_MS = 5 * 60 * 1000; // 5 minutes in milliseconds
+const COOLDOWN_MS = 20 * 1000; // 20 seconds in milliseconds
 
 // Create WhatsApp client with local authentication (saves session)
 const client = new Client({
@@ -42,7 +42,7 @@ client.on('ready', () => {
     console.log('WhatsApp Bot is ready and running!');
     console.log(`Monitoring group: "${config.targetGroupName}"`);
     console.log('Using Gemini AI for contextual replies (FREE)');
-    console.log('Cooldown: 5 minutes between replies');
+    console.log('Cooldown: 20 seconds between replies');
     console.log('========================================\n');
 });
 
