@@ -7,8 +7,8 @@ export const config = {
   // Hasna's phone number
   TARGET_PHONE_NUMBER: '919539073546',
 
-  // Delay before sending reply (20 seconds)
-  REPLY_DELAY_MS: 20000,
+  // Delay before sending reply (10 seconds)
+  REPLY_DELAY_MS: 10000,
 
   // Your name
   YOUR_NAME: 'Nandakishore',
@@ -20,7 +20,7 @@ export const config = {
   MAX_CONTEXT_MESSAGES: 50,
 
   // Gemini model
-  GEMINI_MODEL: 'gemini-1.5-flash-latest',
+  GEMINI_MODEL: 'gemini-pro',
 
   // Hasna-specific paths
   CHAT_HISTORY_FILE: './hasna-bot/data/chat_history.json',

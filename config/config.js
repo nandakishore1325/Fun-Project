@@ -10,7 +10,7 @@ export const config = {
 
   // Delay before sending reply (in milliseconds)
   // 20 seconds = 20000 ms
-  REPLY_DELAY_MS: 20000,
+  REPLY_DELAY_MS: 10000,
 
   // Your name (for context in AI responses)
   YOUR_NAME: process.env.YOUR_NAME || 'Nandakishore',
@@ -22,7 +22,7 @@ export const config = {
   MAX_CONTEXT_MESSAGES: 50,
 
   // Gemini model to use
-  GEMINI_MODEL: 'gemini-1.5-flash-latest',
+  GEMINI_MODEL: 'gemini-pro',
 
   // Path to chat history file
   CHAT_HISTORY_FILE: './data/chat_history.json',
