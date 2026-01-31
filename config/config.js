@@ -21,8 +21,8 @@ export const config = {
   // Maximum number of recent messages to include as context
   MAX_CONTEXT_MESSAGES: 50,
 
-  // Gemini model to use (gemini-1.5-flash is fast and free)
-  GEMINI_MODEL: 'gemini-1.5-flash',
+  // Gemini model to use
+  GEMINI_MODEL: 'gemini-1.5-flash-latest',
 
   // Path to chat history file
   CHAT_HISTORY_FILE: './data/chat_history.json',

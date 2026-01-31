@@ -20,7 +20,7 @@ export const config = {
   MAX_CONTEXT_MESSAGES: 50,
 
   // Gemini model
-  GEMINI_MODEL: 'gemini-1.5-flash',
+  GEMINI_MODEL: 'gemini-1.5-flash-latest',
 
   // Hasna-specific paths
   CHAT_HISTORY_FILE: './hasna-bot/data/chat_history.json',
