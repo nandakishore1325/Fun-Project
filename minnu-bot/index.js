@@ -182,6 +182,65 @@ Reply as ${config.YOUR_NAME} (just the message, nothing else):`;
       return fallbacks[Math.floor(Math.random() * fallbacks.length)];
     }
   }
+
+  async generateCheckInMessage(chatContext) {
+    const systemPrompt = `You ARE ${config.YOUR_NAME}. You're a 24 year old guy working in Bangalore. You're chatting with ${config.TARGET_NAME} on WhatsApp.
+
+You just sent a message and ${config.TARGET_NAME} hasn't replied yet. You want to check in on them in a caring, natural way.
+
+YOUR PERSONALITY:
+- You genuinely care about ${config.TARGET_NAME}
+- You're reliable and someone people can count on
+- You notice when something might be off
+- You're supportive but not pushy
+
+WHAT TO DO:
+- Send a gentle follow-up based on the conversation context
+- Maybe ask if everything's okay, or if they need anything
+- Reference something from the conversation if relevant
+- Keep it natural, like a caring friend would
+- Could be checking if they're busy, if something's on their mind, or just a warm nudge
+- Vary your approach - don't always ask the same thing
+
+STYLE:
+- Casual, lowercase, like real texting
+- Short and caring, 1-2 sentences
+- Don't be clingy or desperate
+- Don't overuse emojis
+- Sound genuinely concerned, not interrogating`;
+
+    const userMessage = `CONVERSATION SO FAR:
+${chatContext || 'No previous context.'}
+
+${config.TARGET_NAME} hasn't replied to your last message. Send a caring check-in (just the message, nothing else):`;
+
+    try {
+      const completion = await this.groq.chat.completions.create({
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userMessage }
+        ],
+        model: config.GROQ_MODEL,
+        temperature: 0.9,
+        max_tokens: 100,
+      });
+
+      const reply = completion.choices[0]?.message?.content?.trim() || '';
+      console.log(`🤖 AI generated check-in: "${reply}"`);
+      return reply;
+    } catch (error) {
+      console.error('Error generating check-in:', error.message);
+      const fallbacks = [
+        "hey you okay?",
+        "everything alright?",
+        "you there?",
+        "hmm you went quiet, all good?",
+        "just checking in",
+        "hey, you okay over there?"
+      ];
+      return fallbacks[Math.floor(Math.random() * fallbacks.length)];
+    }
+  }
 }
 
 // ============ WHATSAPP BOT ============
@@ -201,8 +260,11 @@ class WhatsAppBot {
     });
 
     this.pendingReplies = new Map();
+    this.checkInTimeout = null;
+    this.targetChat = null;
     this.isReady = false;
     this.targetChatId = `${config.TARGET_PHONE_NUMBER}@c.us`;
+    this.CHECK_IN_DELAY_MS = 15000; // 15 seconds
     this.setupEventHandlers();
   }
 
@@ -244,8 +306,16 @@ class WhatsAppBot {
       const messageBody = message.body;
       if (!messageBody || messageBody.trim() === '') return;
 
+      // They replied! Cancel any pending check-in
+      if (this.checkInTimeout) {
+        clearTimeout(this.checkInTimeout);
+        this.checkInTimeout = null;
+        console.log('💚 They replied - cancelled check-in timer');
+      }
+
       console.log(`\n📨 Message from ${config.TARGET_NAME}: "${messageBody}"`);
       this.chatHistory.addMessage(config.TARGET_NAME, messageBody);
+      this.targetChat = chat;
 
       if (this.pendingReplies.has(senderId)) {
         clearTimeout(this.pendingReplies.get(senderId));
@@ -275,8 +345,40 @@ class WhatsAppBot {
       await chat.sendMessage(reply);
       console.log(`✉️ Sent reply: "${reply}"`);
       this.chatHistory.addMessage(config.YOUR_NAME, reply);
+      this.targetChat = chat;
+
+      // Start check-in timer - if they don't reply in 15 seconds, check on them
+      if (this.checkInTimeout) {
+        clearTimeout(this.checkInTimeout);
+      }
+      console.log(`⏰ Starting ${this.CHECK_IN_DELAY_MS / 1000}s check-in timer...`);
+      this.checkInTimeout = setTimeout(async () => {
+        await this.sendCheckIn();
+      }, this.CHECK_IN_DELAY_MS);
     } catch (error) {
       console.error('Error sending reply:', error.message);
+    }
+  }
+
+  async sendCheckIn() {
+    try {
+      if (!this.targetChat) {
+        console.log('⚠️ No chat available for check-in');
+        return;
+      }
+
+      console.log(`\n💭 No reply received - sending caring check-in...`);
+      await this.targetChat.sendStateTyping();
+      const context = this.chatHistory.getContextForAI();
+      const checkInMsg = await this.aiService.generateCheckInMessage(context);
+      const typingTime = Math.min(checkInMsg.length * 50, 2000);
+      await this.sleep(typingTime);
+      await this.targetChat.sendMessage(checkInMsg);
+      console.log(`💚 Sent check-in: "${checkInMsg}"`);
+      this.chatHistory.addMessage(config.YOUR_NAME, checkInMsg);
+      this.checkInTimeout = null;
+    } catch (error) {
+      console.error('Error sending check-in:', error.message);
     }
   }
 
@@ -302,6 +404,10 @@ class WhatsAppBot {
       clearTimeout(timeoutId);
     }
     this.pendingReplies.clear();
+    if (this.checkInTimeout) {
+      clearTimeout(this.checkInTimeout);
+      this.checkInTimeout = null;
+    }
     if (this.client) await this.client.destroy();
     console.log('👋 Minnu Bot stopped. Goodbye!');
   }
